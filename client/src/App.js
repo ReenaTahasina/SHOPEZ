@@ -19,7 +19,7 @@ import GeneralContextProvider from './context/GeneralContext';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function App() {
+const App = () => {
   const [cartItems, setCartItems] = useState([]);
 
   const fetchCart = async () => {
