@@ -24,15 +24,12 @@ export const fetchProductDetails = async (req, res) => {
 // ================== Fetch Categories ==================
 export const fetchCategories = async (req, res) => {
   try {
-    let admin = await Admin.findOne();
-    if (!admin) {
-      admin = new Admin({ banner: '', categories: [] });
-      await admin.save();
-    }
-    res.json(admin.categories);
+    // ✅ Pull distinct categories directly from products collection
+    const categories = await Product.distinct("category");
+    res.json(categories);
   } catch (err) {
-    console.error('fetchCategories Error:', err);
-    res.status(500).json({ message: 'Error occurred', error: err.message });
+    console.error("fetchCategories Error:", err);
+    res.status(500).json({ message: "Error occurred", error: err.message });
   }
 };
 
@@ -52,45 +49,36 @@ export const addNewProduct = async (req, res) => {
   } = req.body;
 
   try {
-    // 👇 Only authorized user (admin) can add product
     if (req.user.usertype !== "admin") {
       return res.status(403).json({ message: "Access denied: Admins only" });
     }
 
-    if (productCategory === 'new category') {
+    let categoryToUse = productCategory;
+    if (productCategory === "new category") {
+      categoryToUse = productNewCategory;
       const admin = await Admin.findOne();
-      admin.categories.push(productNewCategory);
-      await admin.save();
-
-      const newProduct = new Product({
-        title: productName,
-        description: productDescription,
-        mainImg: productMainImg,
-        carousel: productCarousel,
-        category: productNewCategory,
-        sizes: productSizes,
-        gender: productGender,
-        price: productPrice,
-        discount: productDiscount
-      });
-      await newProduct.save();
-    } else {
-      const newProduct = new Product({
-        title: productName,
-        description: productDescription,
-        mainImg: productMainImg,
-        carousel: productCarousel,
-        category: productCategory,
-        sizes: productSizes,
-        gender: productGender,
-        price: productPrice,
-        discount: productDiscount
-      });
-      await newProduct.save();
+      if (admin) {
+        admin.categories.push(productNewCategory);
+        await admin.save();
+      }
     }
-    res.json({ message: 'Product added!!' });
+
+    const newProduct = new Product({
+      title: productName,
+      description: productDescription,
+      mainImg: productMainImg,
+      carousel: productCarousel,
+      category: categoryToUse,
+      sizes: productSizes,
+      gender: productGender,
+      price: productPrice,
+      discount: productDiscount
+    });
+
+    await newProduct.save();
+    res.json({ message: "Product added!!" });
   } catch (err) {
-    res.status(500).json({ message: 'Error occurred' });
+    res.status(500).json({ message: "Error occurred" });
   }
 };
 
@@ -111,19 +99,20 @@ export const updateProduct = async (req, res) => {
   } = req.body;
 
   try {
-    // 👇 Only authorized user (admin) can update product
     if (req.user.usertype !== "admin") {
       return res.status(403).json({ message: "Access denied: Admins only" });
     }
 
     const product = await Product.findById(id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (!product) return res.status(404).json({ message: "Product not found" });
 
-    if (productCategory === 'new category') {
-      const admin = await Admin.findOne();
-      admin.categories.push(productNewCategory);
-      await admin.save();
+    if (productCategory === "new category") {
       product.category = productNewCategory;
+      const admin = await Admin.findOne();
+      if (admin) {
+        admin.categories.push(productNewCategory);
+        await admin.save();
+      }
     } else {
       product.category = productCategory;
     }
@@ -138,21 +127,36 @@ export const updateProduct = async (req, res) => {
     product.discount = productDiscount;
 
     await product.save();
-
-    res.json({ message: 'Product updated!!' });
+    res.json({ message: "Product updated!!" });
   } catch (err) {
-    res.status(500).json({ message: 'Error occurred' });
+    res.status(500).json({ message: "Error occurred" });
   }
 };
+
+// ================== Buy Product ==================
 export const buyProduct = async (req, res) => {
   try {
-    const { userId, title, description, mainImg, size, quantity, price, discount, paymentMethod, orderDate, name, email, mobile, address, pincode } = req.body;
+    const {
+      userId,
+      title,
+      description,
+      mainImg,
+      size,
+      quantity,
+      price,
+      discount,
+      paymentMethod,
+      orderDate,
+      name,
+      email,
+      mobile,
+      address,
+      pincode
+    } = req.body;
 
     // TODO: Save order to database
-    // Example: await Order.create({ ... })
-
-    res.status(200).json({ message: 'Order placed successfully' });
+    res.status(200).json({ message: "Order placed successfully" });
   } catch (err) {
-    res.status(500).json({ message: 'Order failed', error: err.message });
+    res.status(500).json({ message: "Order failed", error: err.message });
   }
 };
